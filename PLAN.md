@@ -1,6 +1,6 @@
 # L2M — Planificación y especificación técnica
 
-**Estado:** diseño inicial.  
+**Estado:** diseño inicial con decisiones de Fase 0 documentadas.  
 **Licencia del proyecto:** MIT.  
 **Idiomas:** español e inglés.  
 **Modalidad:** online y local/offline.  
@@ -27,8 +27,8 @@ El objetivo es avanzar de forma incremental: primero un MVP pequeño, medible y 
 | Datos | Fuentes públicas y propias |
 | Inferencia | Online y local |
 | Offline | La inferencia local funcionará sin Internet una vez instalados modelos y dependencias |
-| Tecnologías | Sin restricciones rígidas; Rust cuando aporte ventajas |
-| Precisión/velocidad | Perfiles configurables |
+| Tecnologías | Rust para Core/ejecución; Python aislado para entrenamiento |
+| Precisión/velocidad | Perfiles configurables, sin promesas de precisión |
 | Interfaz | Modo sencillo y avanzado |
 | Idiomas | Español e inglés |
 | Distribución local | Aplicación de escritorio |
@@ -51,7 +51,7 @@ El objetivo es avanzar de forma incremental: primero un MVP pequeño, medible y 
 ### 4.1 Componentes comunes
 
 - **L2M Core:** tipos, configuración, contratos, errores, capacidades y orquestación.
-- **L2M Data Engine:** importación, validación, limpieza, transformación, particionado y trazabilidad.
+- **L2M Data Engine:** importación, validación, limpieza, transformación, particionado y trazabilidad de datasets.
 - **L2M Model Engine:** interfaces y adaptadores para familias de modelos.
 - **L2M Learning Engine:** entrenamiento, experimentos, self-training controlado y promoción.
 - **L2M Evaluation Engine:** métricas, validación, calibración, comparación y regresiones.
@@ -71,24 +71,22 @@ El objetivo es avanzar de forma incremental: primero un MVP pequeño, medible y 
 - VaR, CVaR, escenarios y backtesting.
 - Sin ejecución de órdenes, trading automático ni recomendaciones financieras personalizadas.
 
-## 5. Tecnologías candidatas
+## 5. Tecnologías candidatas y límites
 
-La selección final debe verificarse durante las fases correspondientes; esta lista no autoriza a introducir todas las tecnologías de golpe.
-
-| Área | Candidatos |
+| Área | Dirección inicial |
 |---|---|
 | Core y procesamiento | Rust |
-| Entrenamiento/experimentación | Python |
-| Modelos | PyTorch, scikit-learn |
-| Intercambio de modelos | ONNX cuando sea compatible |
-| Inferencia Rust | rten u otro runtime validado |
+| Entrenamiento/experimentación | Python en procesos aislados |
+| Modelos | Baselines nativos primero; scikit-learn/PyTorch cuando proceda |
+| Intercambio de modelos | ONNX opcional, según compatibilidad |
+| Inferencia | Runtime nativo L2M para el primer modelo; runtime adicional tras pruebas |
 | Frontend | TypeScript |
-| Escritorio | Tauri |
-| Online | Cloudflare Pages y Workers |
-| Artefactos online | Cloudflare R2 |
+| Escritorio | Tauri como candidato |
+| Online | Cloudflare Pages + Workers ligeros |
+| Artefactos online | Cloudflare R2 cuando se justifique |
 | Persistencia local inicial | SQLite |
 
-La compatibilidad de operadores ONNX, licencias, rendimiento, tamaño de artefactos y límites de Cloudflare debe probarse. No se presupone que un modelo entrenable en Python pueda ejecutarse directamente en Workers.
+No se presupone que todos los modelos puedan exportarse a ONNX ni ejecutarse en Workers. La compatibilidad de operadores, licencias, rendimiento, tamaño de artefactos y límites de plataforma debe probarse. No se introducirán todas las tecnologías de golpe.
 
 ## 6. Motor predictivo
 
@@ -133,8 +131,8 @@ Las pseudoetiquetas deben registrar su origen y confianza. No deben tratarse com
 ## 9. Datos y formatos
 
 Formatos iniciales previstos:
-- CSV.
-- JSON.
+- CSV para el MVP.
+- JSON para manifiestos y contratos.
 - Parquet cuando se incorpore soporte robusto.
 
 Cada dataset tendrá un manifiesto con:
@@ -145,7 +143,7 @@ Cada dataset tendrá un manifiesto con:
 - Objetivo/target, si existe.
 - Transformaciones aplicadas.
 - Particiones utilizadas.
-- Restricciones y notas de calidad.
+- Hash SHA-256 del archivo y restricciones/notas de calidad.
 
 La importación debe validar columnas, tipos, valores ausentes, dimensiones, tamaños y codificación. Los datos no confiables no podrán ejecutar código.
 
@@ -224,6 +222,7 @@ No se debe asumir que Workers es adecuado para entrenar modelos grandes. El entr
 - Documentar licencias de modelos y datasets por separado de la licencia del código.
 - Proporcionar controles de borrado y exportación de datos cuando se implemente almacenamiento persistente.
 - No añadir telemetría oculta.
+- No cargar serializaciones que ejecuten código procedentes de fuentes no confiables.
 
 ## 15. Licencia
 
@@ -231,60 +230,7 @@ El código del proyecto utilizará MIT. Esta licencia permite uso, modificación
 
 ## 16. Estructura prevista del repositorio
 
-La estructura es una propuesta objetivo; crear directorios solo cuando una fase los necesite.
-
-```text
-L2M/
-├── README.md
-├── LICENSE
-├── AGENTS.md
-├── PLAN.md
-├── ROADMAP.md
-├── ARCHITECTURE.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── docs/
-│   ├── overview.md
-│   ├── architecture.md
-│   ├── data.md
-│   ├── learning.md
-│   ├── evaluation.md
-│   ├── finance.md
-│   ├── deployment.md
-│   └── decisions/
-├── apps/
-│   ├── web/
-│   └── desktop/
-├── crates/
-│   ├── l2m-core/
-│   ├── l2m-data/
-│   ├── l2m-inference/
-│   ├── l2m-learning/
-│   ├── l2m-evaluation/
-│   ├── l2m-registry/
-│   └── l2m-finance/
-├── training/
-│   ├── common/
-│   ├── general/
-│   ├── finance/
-│   ├── experiments/
-│   └── export/
-├── models/
-│   ├── manifests/
-│   └── benchmarks/
-├── workers/
-│   └── api/
-├── datasets/
-│   ├── examples/
-│   └── manifests/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   ├── performance/
-│   ├── learning/
-│   └── finance/
-└── scripts/
-```
+La estructura es una propuesta objetivo; crear directorios solo cuando una fase los necesite. La arquitectura detallada está en [ARCHITECTURE.md](ARCHITECTURE.md) y los contratos en [docs/CONTRACTS.md](docs/CONTRACTS.md).
 
 ## 17. Roadmap
 
@@ -338,3 +284,14 @@ Las instrucciones operativas están en [AGENTS.md](AGENTS.md). En resumen:
 - No desplegar ni cambiar recursos externos sin autorización explícita.
 - No convertir el módulo financiero en un sistema de trading.
 - No permitir que el self-training apruebe sus propios resultados sin evaluación independiente.
+
+## 21. Decisiones de Fase 0
+
+Las decisiones aceptadas y sus motivos se registran en [docs/decisions/](docs/decisions/).
+
+1. **Frontera Rust/Python:** Core y ejecución común en Rust; entrenamiento Python aislado y comunicado mediante contratos JSON versionados y artefactos en disco. No introducir PyO3/RPC en el MVP.
+2. **Paquete de modelo:** manifiesto versionado, artefacto, esquema de entrada/salida, preprocesamiento, procedencia, licencia y checksums. ONNX es opcional; el primer baseline puede usar un formato declarativo nativo.
+3. **Cloudflare:** Pages para frontend, Workers para API ligera/coordinación y R2 para artefactos. No planificar entrenamiento pesado en Workers; inferencia remota solo tras medir compatibilidad y límites.
+4. **Repositorio:** monorepo; workspace Cargo virtual al iniciar Fase 1; Python separado en `training/`. Crear crates solo cuando exista funcionalidad real.
+
+Los detalles y fuentes técnicas están en [ARCHITECTURE.md](ARCHITECTURE.md), [docs/CONTRACTS.md](docs/CONTRACTS.md) y los ADR correspondientes.
